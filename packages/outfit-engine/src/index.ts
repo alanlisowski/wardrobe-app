@@ -8,7 +8,7 @@ import { scoreOutfit } from "./score";
 
 /**
  * Top-level entry point: closet + context -> ranked outfit suggestions.
- * SPEC section 10. TODO: dedupe near-identical outfits before slicing.
+ * SPEC section 10, steps 1-4.
  */
 export function suggestOutfits(
   closet: EngineItem[],
@@ -17,8 +17,20 @@ export function suggestOutfits(
 ): ScoredOutfit[] {
   const filtered = filterCloset(closet, ctx);
   const candidates = generateCandidates(filtered);
-  return candidates
+  const ranked = candidates
     .map((c) => scoreOutfit(c, ctx))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    .sort((a, b) => b.score - a.score);
+
+  // Step 4 — dedupe: drop any outfit that shares 3+ items with a higher-ranked kept outfit.
+  const results: ScoredOutfit[] = [];
+  for (const candidate of ranked) {
+    const ids = new Set(candidate.items.map(({ item }) => item.id));
+    const isDupe = results.some(
+      (kept) => kept.items.filter(({ item }) => ids.has(item.id)).length >= 3,
+    );
+    if (!isDupe) results.push(candidate);
+    if (results.length >= limit) break;
+  }
+
+  return results;
 }
