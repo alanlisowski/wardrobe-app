@@ -10,12 +10,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.12",
+    "@hono/node-server": "^1.19.14",
     "@wardrobe/db": "workspace:*",
-    "@wardrobe/shared": "workspace:*"
+    "@wardrobe/shared": "workspace:*",
+    "bcrypt": "^6.0.0",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.12"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.10.1",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
