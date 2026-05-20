@@ -5,7 +5,5 @@ pillow==11.0.0
 numpy==1.26.4
 scikit-learn==1.5.2
 rembg==2.0.59
-# CLIP embedding is heavy (~2GB with torch). Uncomment when you implement
-# the embedding step in /process (see SPEC section 9):
-# torch==2.5.1
-# open-clip-torch==2.29.0
+torch==2.5.1
+open-clip-torch==2.29.0
