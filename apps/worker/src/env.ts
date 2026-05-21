@@ -1,12 +1,9 @@
-/** Centralised environment access for the API. */
+/** Centralised environment access for the worker. */
 export const env = {
-  port: Number(process.env.API_PORT ?? 3001),
-  databaseUrl:
-    process.env.DATABASE_URL ??
-    "postgres://wardrobe:changeme@localhost:5432/wardrobe",
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
-  sessionSecret: process.env.SESSION_SECRET ?? "dev-secret",
   mlServiceUrl: process.env.ML_SERVICE_URL ?? "http://localhost:8000",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
   s3Endpoint: process.env.S3_ENDPOINT ?? "http://localhost:9000",
   s3AccessKey: process.env.S3_ACCESS_KEY ?? "wardrobe",
   s3SecretKey: process.env.S3_SECRET_KEY ?? "changeme123",

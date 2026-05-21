@@ -40,7 +40,9 @@ services:
       - "8000:8000"
     environment:
       PORT: 8000
-
+    volumes:
+      - ./services/ml:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
   api:
     build:
       context: .
