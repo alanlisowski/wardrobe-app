@@ -149,12 +149,6 @@ itemsRoute.get("/:id", requireAuth, async (c) => {
     .where(and(eq(items.id, itemId), eq(items.userId, userId)))
     .limit(1);
 
-  console.log(
-    `[items/:id] ${new Date().toISOString()} id=${itemId}` +
-      ` procStatus=${item?.procStatus ?? "NOT_FOUND"}` +
-      ` updatedAt=${item?.updatedAt?.toISOString() ?? "null"}`,
-  );
-
   if (!item) return c.json({ error: "Item not found", code: "NOT_FOUND" }, 404);
   return c.json({ item }, 200, { "Cache-Control": "no-store" });
 });
