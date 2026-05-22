@@ -44,6 +44,11 @@ async def process(file: UploadFile = File(...)) -> JSONResponse:
     cutout_bytes = remove(raw)
     cutout_img = Image.open(io.BytesIO(cutout_bytes)).convert("RGBA")
 
+    # Cap longest edge to 1568 px (Anthropic's recommended vision maximum) before
+    # any downstream step — safe because k-means ignores resolution and CLIP
+    # resizes to 224 px internally.
+    cutout_img.thumbnail((1568, 1568), Image.LANCZOS)
+
     # Step 2: dominant colors from non-transparent pixels via k-means
     arr = np.array(cutout_img)
     visible = arr[arr[:, :, 3] > 10, :3]  # RGB of opaque-ish pixels

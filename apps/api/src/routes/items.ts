@@ -133,7 +133,9 @@ itemsRoute.get("/", requireAuth, async (c) => {
     db.select({ value: count() }).from(items).where(where),
   ]);
 
-  return c.json({ items: rows, total: countResult[0]?.value ?? 0 });
+  return c.json({ items: rows, total: countResult[0]?.value ?? 0 }, 200, {
+    "Cache-Control": "no-store",
+  });
 });
 
 // GET /items/:id — full item; clients poll this for procStatus
@@ -147,8 +149,14 @@ itemsRoute.get("/:id", requireAuth, async (c) => {
     .where(and(eq(items.id, itemId), eq(items.userId, userId)))
     .limit(1);
 
+  console.log(
+    `[items/:id] ${new Date().toISOString()} id=${itemId}` +
+      ` procStatus=${item?.procStatus ?? "NOT_FOUND"}` +
+      ` updatedAt=${item?.updatedAt?.toISOString() ?? "null"}`,
+  );
+
   if (!item) return c.json({ error: "Item not found", code: "NOT_FOUND" }, 404);
-  return c.json({ item });
+  return c.json({ item }, 200, { "Cache-Control": "no-store" });
 });
 
 // PATCH /items/:id — user corrects AI tags
