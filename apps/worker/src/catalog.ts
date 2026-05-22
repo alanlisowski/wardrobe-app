@@ -9,6 +9,9 @@ export interface CatalogJobData {
   userId: string;
 }
 
+/** Hard ceiling for the entire cataloging pipeline: ML (60s) + vision (30s) + overhead. */
+const CATALOG_TIMEOUT_MS = 90_000;
+
 /**
  * The full cataloging pipeline for one item (SPEC §9):
  *   1. fetch the original photo from MinIO
@@ -21,6 +24,22 @@ export interface CatalogJobData {
  * as "failed" so an item never gets stuck on "processing".
  */
 export async function runCatalog(data: CatalogJobData): Promise<void> {
+  let timeoutHandle: ReturnType<typeof setTimeout>;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error(`cataloging timed out after ${CATALOG_TIMEOUT_MS / 1000}s`)),
+      CATALOG_TIMEOUT_MS,
+    );
+  });
+
+  try {
+    await Promise.race([runCatalogInner(data), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutHandle!);
+  }
+}
+
+async function runCatalogInner(data: CatalogJobData): Promise<void> {
   const { itemId } = data;
 
   const [row] = await db

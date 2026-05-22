@@ -7,8 +7,12 @@
     "scheme": "wardrobe",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": false },
-    "android": { "edgeToEdgeEnabled": true },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
     "plugins": [
       "expo-router",
       [
@@ -16,8 +20,12 @@
         {
           "cameraPermission": "Wardrobe uses the camera to photograph your clothes."
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-font"
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

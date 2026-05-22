@@ -94,40 +94,56 @@ interface AnthropicMessageResponse {
   content: Array<{ type: string; text?: string }>;
 }
 
+const VISION_TIMEOUT_MS = 30_000;
+
 /** Send the cutout PNG to Claude vision and parse structured tags. */
 export async function tagItem(cutoutPngBase64: string): Promise<VisionTags> {
   if (!env.anthropicApiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set");
   }
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": env.anthropicApiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: env.anthropicModel,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/png",
-                data: cutoutPngBase64,
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VISION_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": env.anthropicApiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: env.anthropicModel,
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: cutoutPngBase64,
+                },
               },
-            },
-            { type: "text", text: PROMPT },
-          ],
-        },
-      ],
-    }),
-  });
+              { type: "text", text: PROMPT },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(`Anthropic vision timed out after ${VISION_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

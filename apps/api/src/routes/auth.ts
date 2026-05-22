@@ -78,7 +78,7 @@ auth.post("/signup", async (c) => {
   });
 
   setCookie(c, "session", token, COOKIE_OPTS);
-  return c.json({ user }, 201);
+  return c.json({ user, token }, 201);
 });
 
 auth.post("/login", async (c) => {
@@ -119,7 +119,7 @@ auth.post("/login", async (c) => {
   setCookie(c, "session", token, COOKIE_OPTS);
 
   const { passwordHash: _hash, ...user } = row;
-  return c.json({ user });
+  return c.json({ user, token });
 });
 
 auth.post("/logout", async (c) => {
