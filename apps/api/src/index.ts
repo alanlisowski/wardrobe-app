@@ -5,6 +5,7 @@ import { ensureBucket } from "./lib/storage.js";
 import { health } from "./routes/health.js";
 import { auth } from "./routes/auth.js";
 import { itemsRoute } from "./routes/items.js";
+import { outfitsRoute } from "./routes/outfits.js";
 
 const app = new Hono();
 
@@ -12,9 +13,9 @@ app.get("/", (c) => c.json({ name: "wardrobe-api", status: "ok" }));
 app.route("/health", health);
 app.route("/auth", auth);
 app.route("/items", itemsRoute);
+app.route("/outfits", outfitsRoute);
 
 // TODO: mount the remaining routes — see SPEC section 11:
-//   /outfits  suggest, score, create, list, delete
 //   /wears    log a wear, history
 //   /weather  proxy Open-Meteo
 
