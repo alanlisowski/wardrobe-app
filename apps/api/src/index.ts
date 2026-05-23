@@ -6,6 +6,8 @@ import { health } from "./routes/health.js";
 import { auth } from "./routes/auth.js";
 import { itemsRoute } from "./routes/items.js";
 import { outfitsRoute } from "./routes/outfits.js";
+import { wearsRoute } from "./routes/wears.js";
+import { weatherRoute } from "./routes/weather.js";
 
 const app = new Hono();
 
@@ -14,10 +16,8 @@ app.route("/health", health);
 app.route("/auth", auth);
 app.route("/items", itemsRoute);
 app.route("/outfits", outfitsRoute);
-
-// TODO: mount the remaining routes — see SPEC section 11:
-//   /wears    log a wear, history
-//   /weather  proxy Open-Meteo
+app.route("/wears", wearsRoute);
+app.route("/weather", weatherRoute);
 
 ensureBucket().catch((err) => console.error("Storage init failed:", err));
 
