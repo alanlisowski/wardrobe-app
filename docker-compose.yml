@@ -44,6 +44,7 @@ services:
       - ./services/ml:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
   api:
+    profiles: ["containers"]
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -71,6 +72,7 @@ services:
         condition: service_started
 
   worker:
+    profiles: ["containers"]
     build:
       context: .
       dockerfile: apps/worker/Dockerfile

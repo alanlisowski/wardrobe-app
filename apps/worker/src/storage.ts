@@ -12,13 +12,10 @@ const s3 = new S3Client({
   forcePathStyle: true,
 });
 
-export function objectUrl(key: string): string {
-  return `${env.s3Endpoint}/${env.s3Bucket}/${key}`;
-}
-
+/** Strips any full URL to a bare object key — handles localhost, LAN IPs, or already-plain keys. */
 export function keyFromUrl(url: string): string {
-  const prefix = `${env.s3Endpoint}/${env.s3Bucket}/`;
-  return url.startsWith(prefix) ? url.slice(prefix.length) : url;
+  const match = url.match(/^https?:\/\/[^/]+\/[^/]+\/(.+)$/);
+  return match?.[1] ?? url;
 }
 
 export async function downloadObject(key: string): Promise<Buffer> {
@@ -35,6 +32,7 @@ export async function downloadObject(key: string): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+/** Uploads data to MinIO and returns the object key (not a URL). */
 export async function uploadObject(
   key: string,
   data: Buffer,
@@ -48,5 +46,5 @@ export async function uploadObject(
       ContentType: contentType,
     }),
   );
-  return objectUrl(key);
+  return key;
 }

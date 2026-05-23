@@ -46,22 +46,27 @@ export async function ensureBucket(): Promise<void> {
   console.log(`Bucket "${env.s3Bucket}" is public-read`);
 }
 
-/** Returns the public URL for an object key (uses MINIO_PUBLIC_URL if set). */
-export function objectUrl(key: string): string {
-  return `${env.s3PublicUrl}/${env.s3Bucket}/${key}`;
+/**
+ * Builds the full public URL from an object key or a legacy full URL.
+ * Handles pre-migration rows that still store a full URL (localhost or old LAN IP)
+ * by re-basing them onto the current MINIO_PUBLIC_URL.
+ */
+export function objectUrl(keyOrUrl: string): string {
+  if (keyOrUrl.startsWith("http")) {
+    const match = keyOrUrl.match(/^https?:\/\/[^/]+\/[^/]+\/(.+)$/);
+    const key = match?.[1] ?? keyOrUrl;
+    return `${env.s3PublicUrl}/${env.s3Bucket}/${key}`;
+  }
+  return `${env.s3PublicUrl}/${env.s3Bucket}/${keyOrUrl}`;
 }
 
-/** Extracts the object key from a URL produced by objectUrl(). Handles both
- *  the public base URL and the internal s3Endpoint so delete works for items
- *  uploaded before and after MINIO_PUBLIC_URL was set. */
+/** Extracts the object key from a stored value (plain key or any full URL). */
 export function keyFromUrl(url: string): string {
-  const publicPrefix = `${env.s3PublicUrl}/${env.s3Bucket}/`;
-  const internalPrefix = `${env.s3Endpoint}/${env.s3Bucket}/`;
-  if (url.startsWith(publicPrefix)) return url.slice(publicPrefix.length);
-  if (url.startsWith(internalPrefix)) return url.slice(internalPrefix.length);
-  return url;
+  const match = url.match(/^https?:\/\/[^/]+\/[^/]+\/(.+)$/);
+  return match?.[1] ?? url;
 }
 
+/** Uploads data to MinIO and returns the object key (not a URL). */
 export async function uploadObject(
   key: string,
   data: Buffer,
@@ -70,7 +75,7 @@ export async function uploadObject(
   await s3.send(
     new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: data, ContentType: contentType }),
   );
-  return objectUrl(key);
+  return key;
 }
 
 export async function deleteObject(key: string): Promise<void> {

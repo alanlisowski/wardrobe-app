@@ -3,7 +3,7 @@ import { db, items, itemCategory, itemPattern } from "@wardrobe/db";
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { MAX_WARDROBE_SIZE } from "@wardrobe/shared";
 import { requireAuth, type AuthVariables } from "../middleware/auth.js";
-import { uploadObject, deleteObject, keyFromUrl } from "../lib/storage.js";
+import { uploadObject, deleteObject, keyFromUrl, objectUrl } from "../lib/storage.js";
 import { catalogQueue } from "../lib/queue.js";
 
 type ItemCategoryEnum = (typeof itemCategory.enumValues)[number];
@@ -41,6 +41,17 @@ const itemFields = {
   createdAt: items.createdAt,
   updatedAt: items.updatedAt,
 };
+
+type ItemRow = { originalImageUrl: string; cutoutImageUrl: string | null } & Record<string, unknown>;
+
+/** Converts image keys stored in the DB to full public URLs for API responses. */
+function toResponse<T extends ItemRow>(row: T) {
+  return {
+    ...row,
+    originalImageUrl: objectUrl(row.originalImageUrl),
+    cutoutImageUrl: row.cutoutImageUrl ? objectUrl(row.cutoutImageUrl) : null,
+  };
+}
 
 export const itemsRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -133,7 +144,7 @@ itemsRoute.get("/", requireAuth, async (c) => {
     db.select({ value: count() }).from(items).where(where),
   ]);
 
-  return c.json({ items: rows, total: countResult[0]?.value ?? 0 }, 200, {
+  return c.json({ items: rows.map(toResponse), total: countResult[0]?.value ?? 0 }, 200, {
     "Cache-Control": "no-store",
   });
 });
@@ -150,7 +161,7 @@ itemsRoute.get("/:id", requireAuth, async (c) => {
     .limit(1);
 
   if (!item) return c.json({ error: "Item not found", code: "NOT_FOUND" }, 404);
-  return c.json({ item }, 200, { "Cache-Control": "no-store" });
+  return c.json({ item: toResponse(item) }, 200, { "Cache-Control": "no-store" });
 });
 
 // PATCH /items/:id — user corrects AI tags
@@ -225,7 +236,7 @@ itemsRoute.patch("/:id", requireAuth, async (c) => {
     .returning(itemFields);
 
   if (!item) return c.json({ error: "Item not found", code: "NOT_FOUND" }, 404);
-  return c.json({ item });
+  return c.json({ item: toResponse(item) });
 });
 
 // DELETE /items/:id — remove item and its stored images
