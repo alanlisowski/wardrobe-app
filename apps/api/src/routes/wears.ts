@@ -4,6 +4,62 @@ import { db, items, outfits, wears, wearItems } from "@wardrobe/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth.js";
 import { objectUrl } from "../lib/storage.js";
 
+// Helper: hydrate item details for an array of wear IDs
+async function hydrateWearItems(wearIds: string[]) {
+  if (wearIds.length === 0) return new Map<string, ReturnType<typeof buildWearItemShape>[]>();
+
+  const wearItemRows = await db
+    .select({ wearId: wearItems.wearId, itemId: wearItems.itemId })
+    .from(wearItems)
+    .where(inArray(wearItems.wearId, wearIds));
+
+  const allItemIds = [...new Set(wearItemRows.map((r) => r.itemId))];
+  const itemRows = allItemIds.length > 0
+    ? await db
+        .select({
+          id: items.id,
+          name: items.name,
+          category: items.category,
+          cutoutImageUrl: items.cutoutImageUrl,
+          originalImageUrl: items.originalImageUrl,
+          wearCount: items.wearCount,
+        })
+        .from(items)
+        .where(inArray(items.id, allItemIds))
+    : [];
+
+  const itemById = new Map(itemRows.map((r) => [r.id, r]));
+  const byWear = new Map<string, ReturnType<typeof buildWearItemShape>[]>();
+
+  for (const row of wearItemRows) {
+    const item = itemById.get(row.itemId);
+    if (!item) continue;
+    const arr = byWear.get(row.wearId) ?? [];
+    arr.push(buildWearItemShape(item));
+    byWear.set(row.wearId, arr);
+  }
+
+  return byWear;
+}
+
+function buildWearItemShape(item: {
+  id: string;
+  name: string | null;
+  category: string | null;
+  cutoutImageUrl: string | null;
+  originalImageUrl: string;
+  wearCount: number;
+}) {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    cutoutImageUrl: item.cutoutImageUrl ? objectUrl(item.cutoutImageUrl) : null,
+    originalImageUrl: objectUrl(item.originalImageUrl),
+    wearCount: item.wearCount,
+  };
+}
+
 export const wearsRoute = new Hono<{ Variables: AuthVariables }>();
 
 // POST /wears — log a wear, bump wear_count + last_worn_at on items (and outfit if linked)
@@ -107,52 +163,85 @@ wearsRoute.get("/", requireAuth, async (c) => {
 
   if (wearRows.length === 0) return c.json({ wears: [] });
 
-  const wearIds = wearRows.map((w) => w.id);
-  const wearItemRows = await db
-    .select({ wearId: wearItems.wearId, itemId: wearItems.itemId })
-    .from(wearItems)
-    .where(inArray(wearItems.wearId, wearIds));
-
-  // Hydrate item details for each wear
-  const allItemIds = [...new Set(wearItemRows.map((r) => r.itemId))];
-  const itemRows = allItemIds.length > 0
-    ? await db
-        .select({
-          id: items.id,
-          name: items.name,
-          category: items.category,
-          cutoutImageUrl: items.cutoutImageUrl,
-          originalImageUrl: items.originalImageUrl,
-          wearCount: items.wearCount,
-        })
-        .from(items)
-        .where(inArray(items.id, allItemIds))
-    : [];
-
-  const itemById = new Map(itemRows.map((r) => [r.id, r]));
-
-  const itemIdsByWear = new Map<string, string[]>();
-  for (const row of wearItemRows) {
-    const arr = itemIdsByWear.get(row.wearId) ?? [];
-    arr.push(row.itemId);
-    itemIdsByWear.set(row.wearId, arr);
-  }
+  const byWear = await hydrateWearItems(wearRows.map((w) => w.id));
 
   return c.json({
-    wears: wearRows.map((w) => ({
-      ...w,
-      items: (itemIdsByWear.get(w.id) ?? []).flatMap((itemId) => {
-        const item = itemById.get(itemId);
-        if (!item) return [];
-        return [{
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          cutoutImageUrl: item.cutoutImageUrl ? objectUrl(item.cutoutImageUrl) : null,
-          originalImageUrl: objectUrl(item.originalImageUrl),
-          wearCount: item.wearCount,
-        }];
-      }),
-    })),
+    wears: wearRows.map((w) => ({ ...w, items: byWear.get(w.id) ?? [] })),
   });
+});
+
+// GET /wears/:id — single wear with hydrated items
+wearsRoute.get("/:id", requireAuth, async (c) => {
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+
+  const [wear] = await db
+    .select()
+    .from(wears)
+    .where(and(eq(wears.id, id), eq(wears.userId, userId)))
+    .limit(1);
+
+  if (!wear) {
+    return c.json({ error: "Wear not found", code: "NOT_FOUND" }, 404);
+  }
+
+  const byWear = await hydrateWearItems([wear.id]);
+  return c.json({ wear: { ...wear, items: byWear.get(wear.id) ?? [] } });
+});
+
+// DELETE /wears/:id — remove a wear and fix item stats
+wearsRoute.delete("/:id", requireAuth, async (c) => {
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+
+  // Verify ownership
+  const [wear] = await db
+    .select()
+    .from(wears)
+    .where(eq(wears.id, id))
+    .limit(1);
+
+  if (!wear) {
+    return c.json({ error: "Wear not found", code: "NOT_FOUND" }, 404);
+  }
+  if (wear.userId !== userId) {
+    return c.json({ error: "Forbidden", code: "FORBIDDEN" }, 403);
+  }
+
+  // Collect affected item IDs before the cascade removes wear_items
+  const wearItemRows = await db
+    .select({ itemId: wearItems.itemId })
+    .from(wearItems)
+    .where(eq(wearItems.wearId, id));
+
+  const affectedItemIds = wearItemRows.map((r) => r.itemId);
+
+  // Delete the wear; FK cascade removes wear_items rows automatically
+  await db.delete(wears).where(eq(wears.id, id));
+
+  if (affectedItemIds.length > 0) {
+    // Decrement wear_count (floor at 0)
+    await db
+      .update(items)
+      .set({ wearCount: sql`GREATEST(0, ${items.wearCount} - 1)` })
+      .where(inArray(items.id, affectedItemIds));
+
+    // Recompute last_worn_at for each affected item from remaining wears
+    for (const itemId of affectedItemIds) {
+      const [mostRecent] = await db
+        .select({ createdAt: wears.createdAt })
+        .from(wears)
+        .innerJoin(wearItems, eq(wearItems.wearId, wears.id))
+        .where(eq(wearItems.itemId, itemId))
+        .orderBy(desc(wears.wornOn), desc(wears.createdAt))
+        .limit(1);
+
+      await db
+        .update(items)
+        .set({ lastWornAt: mostRecent?.createdAt ?? null })
+        .where(eq(items.id, itemId));
+    }
+  }
+
+  return c.body(null, 204);
 });

@@ -12,11 +12,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { api, type ApiItem, type ApiOutfit, type ApiWear } from '../../lib/api';
+import { api, type ApiItem, type ApiOutfit, type ApiWear } from '../../../lib/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_CELL_SIZE = (SCREEN_WIDTH - 40 - 16) / 3; // 3 columns
@@ -62,13 +62,19 @@ function groupByDate(wears: ApiWear[]): { dateKey: string; wears: ApiWear[] }[] 
 
 // ── Wear card ─────────────────────────────────────────────────────────────────
 
-function WearCard({ wear }: { wear: ApiWear }) {
+function WearCard({ wear, onPress }: { wear: ApiWear; onPress: () => void }) {
   return (
-    <View style={styles.wearCard}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.82}
+      style={styles.wearCard}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.wearItemsRow}
+        // Prevent the horizontal scroll from swallowing the tap
+        scrollEventThrottle={16}
       >
         {(wear.items ?? []).length > 0 ? (
           (wear.items ?? []).map((item) => (
@@ -92,7 +98,11 @@ function WearCard({ wear }: { wear: ApiWear }) {
         )}
       </ScrollView>
       {wear.note ? <Text style={styles.wearNote}>{wear.note}</Text> : null}
-    </View>
+      {/* Tap indicator */}
+      <View style={styles.wearCardChevron}>
+        <Ionicons name="chevron-forward" size={14} color="#c8c4bf" />
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -356,6 +366,7 @@ function LogWearModal({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function Log() {
+  const router = useRouter();
   const [wears, setWears] = useState<ApiWear[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -422,7 +433,13 @@ export default function Log() {
 
               {/* Wear cards for that day */}
               {dayWears.map((wear) => (
-                <WearCard key={wear.id} wear={wear} />
+                <WearCard
+                  key={wear.id}
+                  wear={wear}
+                  onPress={() =>
+                    router.push({ pathname: '/(tabs)/log/[id]', params: { id: wear.id } })
+                  }
+                />
               ))}
             </View>
           ))}
@@ -522,6 +539,7 @@ const styles = StyleSheet.create({
   wearItemsRow: {
     gap: 10,
     paddingBottom: 4,
+    paddingRight: 20, // make room for chevron
   },
   wearItemCell: {
     alignItems: 'center',
@@ -558,6 +576,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#f0eeec',
+  },
+  wearCardChevron: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    marginTop: -7,
   },
 
   // States

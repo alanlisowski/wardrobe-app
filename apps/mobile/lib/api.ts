@@ -361,6 +361,15 @@ class ApiClient {
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return this.request('GET', `/wears${suffix}`);
   }
+
+  async getWear(id: string): Promise<ApiWear> {
+    const data = await this.request<{ wear: ApiWear }>('GET', `/wears/${id}`);
+    return data.wear;
+  }
+
+  async deleteWear(id: string): Promise<void> {
+    await this.request('DELETE', `/wears/${id}`);
+  }
 }
 
 export const api = new ApiClient();
