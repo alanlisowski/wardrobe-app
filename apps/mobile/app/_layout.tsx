@@ -14,7 +14,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     if (user && inAuthGroup) {
       router.replace('/(tabs)/closet');
-    } else if (!user && !inAuthGroup && segments[0] !== 'index') {
+    } else if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
   }, [user, isLoading]);

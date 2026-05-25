@@ -22,6 +22,24 @@ const userFields = {
   createdAt: users.createdAt,
 };
 
+// Drizzle maps Postgres `numeric` columns to strings; coerce to JS numbers
+// so the API contract (`lat: number | null`) stays consistent.
+function toUser(row: {
+  id: string;
+  email: string;
+  lat: string | null;
+  lon: string | null;
+  createdAt: Date;
+}) {
+  return {
+    id: row.id,
+    email: row.email,
+    lat: row.lat != null ? parseFloat(row.lat) : null,
+    lon: row.lon != null ? parseFloat(row.lon) : null,
+    createdAt: row.createdAt,
+  };
+}
+
 export const auth = new Hono<{ Variables: AuthVariables }>();
 
 auth.post("/signup", async (c) => {
@@ -61,24 +79,24 @@ auth.post("/signup", async (c) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const [user] = await db
+  const [rawUser] = await db
     .insert(users)
     .values({ email: email.toLowerCase(), passwordHash })
     .returning(userFields);
 
-  if (!user) {
+  if (!rawUser) {
     return c.json({ error: "failed to create user", code: "SERVER_ERROR" }, 500);
   }
 
   const token = crypto.randomUUID();
   await db.insert(sessions).values({
-    userId: user.id,
+    userId: rawUser.id,
     token,
     expiresAt: new Date(Date.now() + SESSION_MS),
   });
 
   setCookie(c, "session", token, COOKIE_OPTS);
-  return c.json({ user, token }, 201);
+  return c.json({ user: toUser(rawUser), token }, 201);
 });
 
 auth.post("/login", async (c) => {
@@ -118,8 +136,7 @@ auth.post("/login", async (c) => {
 
   setCookie(c, "session", token, COOKIE_OPTS);
 
-  const { passwordHash: _hash, ...user } = row;
-  return c.json({ user, token });
+  return c.json({ user: toUser(row), token });
 });
 
 auth.post("/logout", async (c) => {
@@ -130,14 +147,14 @@ auth.post("/logout", async (c) => {
 });
 
 auth.get("/me", requireAuth, async (c) => {
-  const [user] = await db
+  const [row] = await db
     .select(userFields)
     .from(users)
     .where(eq(users.id, c.get("userId")))
     .limit(1);
 
-  if (!user) return c.json({ error: "not found", code: "NOT_FOUND" }, 404);
-  return c.json({ user });
+  if (!row) return c.json({ error: "not found", code: "NOT_FOUND" }, 404);
+  return c.json({ user: toUser(row) });
 });
 
 auth.patch("/me", requireAuth, async (c) => {
@@ -154,12 +171,12 @@ auth.patch("/me", requireAuth, async (c) => {
   if (body.lat != null) updates.lat = String(body.lat);
   if (body.lon != null) updates.lon = String(body.lon);
 
-  const [user] = await db
+  const [rawUpdated] = await db
     .update(users)
     .set(updates)
     .where(eq(users.id, c.get("userId")))
     .returning(userFields);
 
-  if (!user) return c.json({ error: "not found", code: "NOT_FOUND" }, 404);
-  return c.json({ user });
+  if (!rawUpdated) return c.json({ error: "not found", code: "NOT_FOUND" }, 404);
+  return c.json({ user: toUser(rawUpdated) });
 });

@@ -1,0 +1,4 @@
+docker compose up -d postgres redis minio ml
+pnpm dev:api
+pnpm dev:worker
+cd apps/mobile && pnpm start

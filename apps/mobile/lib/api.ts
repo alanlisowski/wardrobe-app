@@ -59,6 +59,38 @@ export type ItemPatch = Partial<{
   material: string;
 }>;
 
+export interface ApiWeather {
+  tempC: number | null;
+  condition: string;
+}
+
+export interface ScoreBreakdown {
+  color: number;
+  coherence: number;
+  formality: number;
+  pattern: number;
+  novelty: number;
+}
+
+export interface ApiOutfitItem {
+  slot: string;
+  item: {
+    id: string;
+    name: string | null;
+    category: string | null;
+    colors: ApiItemColor[] | null;
+    cutoutImageUrl: string | null;
+    wearCount: number;
+    lastWornAt: string | null;
+  };
+}
+
+export interface ApiSuggestedOutfit {
+  score: number;
+  breakdown: ScoreBreakdown;
+  items: ApiOutfitItem[];
+}
+
 // ── Client ───────────────────────────────────────────────────────────────────
 
 class ApiClient {
@@ -223,6 +255,39 @@ class ApiClient {
 
   async deleteItem(id: string): Promise<void> {
     await this.request('DELETE', `/items/${id}`);
+  }
+
+  // ── Weather ───────────────────────────────────────────────────────────────
+
+  async getWeather(): Promise<ApiWeather> {
+    return this.request('GET', '/weather');
+  }
+
+  // ── Outfits ───────────────────────────────────────────────────────────────
+
+  async suggestOutfits(params: {
+    occasion?: string;
+    useWeather?: boolean;
+  }): Promise<{ outfits: ApiSuggestedOutfit[] }> {
+    return this.request('POST', '/outfits/suggest', params);
+  }
+
+  async saveOutfit(params: {
+    items: { itemId: string; slot: string }[];
+    name?: string;
+    source?: string;
+  }): Promise<{ outfit: { id: string } }> {
+    return this.request('POST', '/outfits', params);
+  }
+
+  // ── Wears ─────────────────────────────────────────────────────────────────
+
+  async logWear(params: {
+    outfitId?: string;
+    itemIds: string[];
+    wornOn?: string;
+  }): Promise<void> {
+    await this.request('POST', '/wears', params);
   }
 }
 

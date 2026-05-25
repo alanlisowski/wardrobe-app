@@ -14,6 +14,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: (updated: ApiUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -65,6 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restore();
   }, []);
 
+  const refreshUser = useCallback((updated: ApiUser) => {
+    setUser(updated);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const { user: u, token } = await api.login(email, password);
     await saveSession(token);
@@ -80,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
