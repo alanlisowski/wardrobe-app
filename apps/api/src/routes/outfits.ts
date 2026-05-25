@@ -6,6 +6,7 @@ import type { OutfitCandidate, ScoreBreakdown, ScoredOutfit } from "@wardrobe/ou
 import { scoreOutfit, suggestOutfits } from "@wardrobe/outfit-engine";
 import type { ItemColor, Occasion, OutfitSlot, Season } from "@wardrobe/shared";
 import { requireAuth, type AuthVariables } from "../middleware/auth.js";
+import { objectUrl } from "../lib/storage.js";
 import { env } from "../env.js";
 
 const anthropic = new Anthropic({ apiKey: env.anthropicApiKey });
@@ -150,7 +151,9 @@ function serializeScoredOutfit(o: ScoredOutfit) {
         name: item.name,
         category: item.category,
         colors: item.colors,
-        cutoutImageUrl: item.cutoutImageUrl,
+        // DB stores bare object keys; expand to a full public URL the same way
+        // GET /items does via its toResponse() helper.
+        cutoutImageUrl: item.cutoutImageUrl ? objectUrl(item.cutoutImageUrl) : null,
         wearCount: item.wearCount,
         lastWornAt: item.lastWornAt,
       },

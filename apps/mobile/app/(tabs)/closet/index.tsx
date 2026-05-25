@@ -162,7 +162,10 @@ export default function Closet() {
               style={[styles.chip, active && styles.chipActive]}
               onPress={() => handleCategorySelect(f.value)}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+              <Text
+                style={[styles.chipText, active && styles.chipTextActive]}
+                numberOfLines={1}
+              >
                 {f.label}
               </Text>
             </Pressable>
@@ -184,6 +187,7 @@ export default function Closet() {
         </View>
       ) : (
         <FlatList
+          style={styles.listFlex}
           data={items}
           keyExtractor={(item) => item.id}
           numColumns={2}
@@ -240,11 +244,14 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     flexGrow: 0,
+    flexShrink: 0,
   },
   filterRow: {
     paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 12,
     gap: 8,
+    alignItems: 'center',
   },
   chip: {
     paddingHorizontal: 16,
@@ -259,9 +266,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#6b6b6b',
+    lineHeight: 18,
   },
   chipTextActive: {
     color: '#ffffff',
+  },
+  listFlex: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

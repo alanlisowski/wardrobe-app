@@ -106,7 +106,7 @@ function ScoreBar({ value, label }: { value: number; label: string }) {
       <View style={styles.scoreBarTrack}>
         <View style={[styles.scoreBarFill, { width: `${Math.round(value * 100)}%` }]} />
       </View>
-      <Text style={styles.scoreBarValue}>{Math.round(value * 100)}</Text>
+      <Text style={styles.scoreBarValue} numberOfLines={1}>{Math.round(value * 100)}</Text>
     </View>
   );
 }
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#1a1a1a',
-    width: 24,
+    width: 32,
     textAlign: 'right',
   },
 
