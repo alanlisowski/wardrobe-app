@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db, items, outfits, wears, wearItems } from "@wardrobe/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth.js";
+import { objectUrl } from "../lib/storage.js";
 
 export const wearsRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -112,14 +113,46 @@ wearsRoute.get("/", requireAuth, async (c) => {
     .from(wearItems)
     .where(inArray(wearItems.wearId, wearIds));
 
-  const itemsByWear = new Map<string, string[]>();
+  // Hydrate item details for each wear
+  const allItemIds = [...new Set(wearItemRows.map((r) => r.itemId))];
+  const itemRows = allItemIds.length > 0
+    ? await db
+        .select({
+          id: items.id,
+          name: items.name,
+          category: items.category,
+          cutoutImageUrl: items.cutoutImageUrl,
+          originalImageUrl: items.originalImageUrl,
+          wearCount: items.wearCount,
+        })
+        .from(items)
+        .where(inArray(items.id, allItemIds))
+    : [];
+
+  const itemById = new Map(itemRows.map((r) => [r.id, r]));
+
+  const itemIdsByWear = new Map<string, string[]>();
   for (const row of wearItemRows) {
-    const arr = itemsByWear.get(row.wearId) ?? [];
+    const arr = itemIdsByWear.get(row.wearId) ?? [];
     arr.push(row.itemId);
-    itemsByWear.set(row.wearId, arr);
+    itemIdsByWear.set(row.wearId, arr);
   }
 
   return c.json({
-    wears: wearRows.map((w) => ({ ...w, itemIds: itemsByWear.get(w.id) ?? [] })),
+    wears: wearRows.map((w) => ({
+      ...w,
+      items: (itemIdsByWear.get(w.id) ?? []).flatMap((itemId) => {
+        const item = itemById.get(itemId);
+        if (!item) return [];
+        return [{
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          cutoutImageUrl: item.cutoutImageUrl ? objectUrl(item.cutoutImageUrl) : null,
+          originalImageUrl: objectUrl(item.originalImageUrl),
+          wearCount: item.wearCount,
+        }];
+      }),
+    })),
   });
 });

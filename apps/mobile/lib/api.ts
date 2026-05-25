@@ -91,6 +91,49 @@ export interface ApiSuggestedOutfit {
   items: ApiOutfitItem[];
 }
 
+/** A persisted outfit (GET /outfits or POST /outfits response). */
+export interface ApiOutfit {
+  id: string;
+  userId: string;
+  name: string | null;
+  source: string;
+  score: number | null;
+  scoreBreakdown: ScoreBreakdown | null;
+  createdAt: string;
+  wearCount: number;
+  lastWornAt: string | null;
+  items: ApiOutfitItem[];
+}
+
+/** Response from POST /outfits/score — no persistence. */
+export interface ApiScoreResult {
+  score: number;
+  breakdown: ScoreBreakdown;
+  critique: string;
+}
+
+/** A lightweight item shape embedded in wear records. */
+export interface ApiWearItem {
+  id: string;
+  name: string | null;
+  category: string | null;
+  cutoutImageUrl: string | null;
+  originalImageUrl: string;
+  wearCount: number;
+}
+
+/** A logged wear entry from GET /wears. */
+export interface ApiWear {
+  id: string;
+  userId: string;
+  outfitId: string | null;
+  wornOn: string;
+  weatherTempC: number | null;
+  note: string | null;
+  createdAt: string;
+  items: ApiWearItem[];
+}
+
 // ── Client ───────────────────────────────────────────────────────────────────
 
 class ApiClient {
@@ -280,6 +323,27 @@ class ApiClient {
     return this.request('POST', '/outfits', params);
   }
 
+  // ── Outfits (score + saved) ───────────────────────────────────────────────
+
+  async scoreOutfit(
+    items: { itemId: string; slot: string }[],
+  ): Promise<ApiScoreResult> {
+    return this.request('POST', '/outfits/score', { items });
+  }
+
+  async listOutfits(): Promise<{ outfits: ApiOutfit[] }> {
+    return this.request('GET', '/outfits');
+  }
+
+  async getOutfit(id: string): Promise<ApiOutfit> {
+    const data = await this.request<{ outfit: ApiOutfit }>('GET', `/outfits/${id}`);
+    return data.outfit;
+  }
+
+  async deleteOutfit(id: string): Promise<void> {
+    await this.request('DELETE', `/outfits/${id}`);
+  }
+
   // ── Wears ─────────────────────────────────────────────────────────────────
 
   async logWear(params: {
@@ -288,6 +352,14 @@ class ApiClient {
     wornOn?: string;
   }): Promise<void> {
     await this.request('POST', '/wears', params);
+  }
+
+  async listWears(params?: { from?: string; to?: string }): Promise<{ wears: ApiWear[] }> {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request('GET', `/wears${suffix}`);
   }
 }
 

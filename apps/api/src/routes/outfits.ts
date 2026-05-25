@@ -330,13 +330,44 @@ outfitsRoute.get("/", requireAuth, async (c) => {
     .from(outfitItems)
     .where(inArray(outfitItems.outfitId, outfitIds));
 
-  const itemsByOutfit = new Map<string, typeof outfitItemRows>();
+  // Hydrate item details for each outfit slot
+  const allItemIds = [...new Set(outfitItemRows.map((r) => r.itemId))];
+  const itemRows = allItemIds.length > 0
+    ? await db
+        .select({
+          id: items.id,
+          name: items.name,
+          category: items.category,
+          colors: items.colors,
+          cutoutImageUrl: items.cutoutImageUrl,
+          wearCount: items.wearCount,
+          lastWornAt: items.lastWornAt,
+        })
+        .from(items)
+        .where(inArray(items.id, allItemIds))
+    : [];
+
+  const itemById = new Map(itemRows.map((r) => [r.id, r]));
+
+  type HydratedSlot = { slot: string; item: { id: string; name: string | null; category: string | null; colors: unknown; cutoutImageUrl: string | null; wearCount: number; lastWornAt: string | null } };
+  const itemsByOutfit = new Map<string, HydratedSlot[]>();
   for (const row of outfitItemRows) {
-    (itemsByOutfit.get(row.outfitId) ?? (() => {
-      const a: typeof outfitItemRows = [];
-      itemsByOutfit.set(row.outfitId, a);
-      return a;
-    })()).push(row);
+    const item = itemById.get(row.itemId);
+    if (!item) continue;
+    const arr = itemsByOutfit.get(row.outfitId) ?? [];
+    arr.push({
+      slot: row.slot,
+      item: {
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        colors: item.colors,
+        cutoutImageUrl: item.cutoutImageUrl ? objectUrl(item.cutoutImageUrl) : null,
+        wearCount: item.wearCount,
+        lastWornAt: item.lastWornAt ? (item.lastWornAt as Date).toISOString() : null,
+      },
+    });
+    itemsByOutfit.set(row.outfitId, arr);
   }
 
   return c.json({
