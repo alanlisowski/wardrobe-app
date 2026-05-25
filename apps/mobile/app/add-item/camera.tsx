@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
@@ -18,6 +18,7 @@ type Phase = 'camera' | 'preview' | 'uploading';
 
 export default function CameraScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -110,15 +111,16 @@ export default function CameraScreen() {
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />
-        {/* Dark gradient overlay at bottom */}
-        <SafeAreaView style={styles.previewOverlay} edges={['bottom', 'top']}>
+        {/* Overlay — top/bottom insets applied directly so the X and
+            action buttons clear the status bar and home indicator */}
+        <View style={[styles.previewOverlay, { paddingTop: insets.top }]}>
           <TouchableOpacity
             onPress={() => setPhase('camera')}
             style={styles.previewClose}
           >
             <Ionicons name="close" size={28} color="#ffffff" />
           </TouchableOpacity>
-          <View style={styles.previewActions}>
+          <View style={[styles.previewActions, { paddingBottom: insets.bottom + 24 }]}>
             <TouchableOpacity
               style={styles.retakeBtn}
               onPress={() => setPhase('camera')}
@@ -134,7 +136,7 @@ export default function CameraScreen() {
               <Text style={styles.useBtnText}>Use photo</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -144,9 +146,11 @@ export default function CameraScreen() {
     <View style={styles.cameraContainer}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
 
-      <SafeAreaView style={styles.cameraUI} edges={['top', 'bottom']}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
+      {/* Full-bleed overlay — insets applied directly on each control strip
+          so the camera preview stays edge-to-edge */}
+      <View style={styles.cameraUI}>
+        {/* Top bar: offset below status bar via insets.top */}
+        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
             <Ionicons name="close" size={28} color="#ffffff" />
           </TouchableOpacity>
@@ -159,8 +163,8 @@ export default function CameraScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Capture button */}
-        <View style={styles.captureRow}>
+        {/* Capture button: offset above home indicator via insets.bottom */}
+        <View style={[styles.captureRow, { paddingBottom: insets.bottom + 24 }]}>
           <TouchableOpacity
             style={styles.captureBtn}
             onPress={handleCapture}
@@ -169,7 +173,7 @@ export default function CameraScreen() {
             <View style={styles.captureBtnInner} />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    // paddingTop is set dynamically: insets.top + 8
   },
   iconBtn: {
     width: 44,
@@ -245,7 +249,7 @@ const styles = StyleSheet.create({
   },
   captureRow: {
     alignItems: 'center',
-    paddingBottom: 24,
+    // paddingBottom is set dynamically: insets.bottom + 24
   },
   captureBtn: {
     width: 72,
@@ -278,7 +282,7 @@ const styles = StyleSheet.create({
   previewActions: {
     flexDirection: 'row',
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    // paddingBottom is set dynamically: insets.bottom + 24
     gap: 12,
   },
   retakeBtn: {
