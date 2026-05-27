@@ -21,6 +21,12 @@
           "cameraPermission": "Wardrobe uses the camera to photograph your clothes."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wardrobe needs access to your photo library to import your wardrobe items."
+        }
+      ],
       "expo-secure-store",
       "expo-font"
     ],

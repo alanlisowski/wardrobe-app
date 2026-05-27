@@ -206,7 +206,7 @@ export default function Closet() {
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
-        onPress={() => router.push('/add-item/camera')}
+        onPress={() => router.push('/add-item')}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
