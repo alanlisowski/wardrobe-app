@@ -16,11 +16,10 @@ This is v1, self-hosted, and built for personal use. The backend runs with `dock
 
 ## Screenshots
 
-> *Add real screenshots to `docs/screenshots/` and they'll appear here automatically.*
 
 | Closet | Suggest | Builder |
 |---|---|---|
-| ![Closet](./docs/screenshots/closet.png) | ![Suggest](./docs/screenshots/suggest.png) | ![Builder](./docs/screenshots/builder.png) | ![Log](./docs/screenshots/log.png) | ![Settings](./docs/screenshots/settings.png) |
+| ![Closet](docs/screenshots/closet.png) | ![Suggest](docs/screenshots/suggest.png) | ![Builder](docs/screenshots/builder.png) | ![Log](docs/screenshots/log.png) | ![Settings](docs/screenshots/settings.png) |
 
 [Demo](./docs/demo.mp4)
 
@@ -97,7 +96,7 @@ graph LR
 ### 1 — Clone and install
 
 ```bash
-git clone https://github.com/your-username/wardrobe-app.git
+git clone https://github.com/alanlisowski/wardrobe-app.git
 cd wardrobe-app
 pnpm install
 ```
