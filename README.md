@@ -19,7 +19,7 @@ This is v1, self-hosted, and built for personal use. The backend runs with `dock
 
 | Closet | Suggest | Builder |
 |---|---|---|
-| ![Closet](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/closet.png) | ![Suggest](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/suggest.png) | ![Builder](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/builder.png) | ![Log](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/log.png) | ![Settings](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/settings.png) |
+| ![Closet](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/closet.PNG) | ![Suggest](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/suggest.PNG) | ![Builder](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/builder.PNG) | ![Log](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/log.PNG) | ![Settings](https://github.com/alanlisowski/wardrobe-app/raw/main/docs/screenshots/settings.PNG) |
 
 [Demo](./docs/demo.mp4)
 
